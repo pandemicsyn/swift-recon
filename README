@@ -1,0 +1,25 @@
+Recon Middleware for use with OpenStack Swift Object Servers.
+
+Add to pipeline and add a filter section:
+
+[filter:recon]
+use = egg:swift#recon
+
+Provides various operational metrics:
+
+fhines@ubuntu:~/swift-recon$ curl -i http://127.0.0.1:6010/recon/async; echo
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 53
+Date: Sun, 12 Jun 2011 06:01:29 GMT
+
+{"async_pending": 28}
+-----------
+fhines@ubuntu:~/swift-recon$ curl -i http://127.0.0.1:6010/recon/load; echo
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 114
+Date: Sun, 12 Jun 2011 06:01:48 GMT
+
+{"15m": "0.00", "1m": "0.00", "5m": "0.00", "processes": "1006", "tasks": "2/182"}
+
