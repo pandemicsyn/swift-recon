@@ -19,7 +19,6 @@ from swift.common.utils import split_path, cache_from_env
 from swift.common.constraints import check_mount
 from os import statvfs, listdir
 import simplejson as json
-import time #remove me
 
 
 class ReconMiddleware(object):
@@ -32,6 +31,9 @@ class ReconMiddleware(object):
     def __init__(self, app, conf, *args, **kwargs):
         self.app = app
         self.devices = conf.get('devices', '/srv/node/')
+        self.recon_cache_path = conf.get('recon_cache_path', \
+            '/var/cache/swift')
+        self.object_recon_cache = "%s/object.recon" % self.recon_cache_path
         self.mount_check = conf.get('mount_check', 'true').lower() in \
                               ('true', 't', '1', 'on', 'yes', 'y')
 
@@ -64,17 +66,26 @@ class ReconMiddleware(object):
         return meminfo
 
     def getasyncinfo(self):
-        """place holder, grab async pendings"""
+        """grab # of async pendings"""
         asyncinfo = {}
-        with open('/etc/swift/object.recon', 'r') as f:
-            asyncinfo = json.load(f)
+        with open(self.object_recon_cache, 'r') as f:
+            recondata = json.load(f)
+            if 'async_pending' in recondata:
+                asyncinfo['async_pending'] = recondata['async_pending']
+            else:
+                asyncinfo['async_pending'] = -1
         return asyncinfo
 
     def getrepinfo(self):
-        """place holder, grab async pendings"""
+        """grab last object replication time"""
         repinfo = {}
-        with open('/etc/swift/object.recon', 'r') as f:
-            repinfo = json.load(f)
+        with open(self.object_recon_cache, 'r') as f:
+            recondata = json.load(f)
+            if 'object_replication_time' in recondata:
+                repinfo['object_replication_time'] = \
+                    recondata['object_replication_time']
+            else:
+                repinfo['object_replication_time'] = -1
         return repinfo
 
     def getdeviceinfo(self):
@@ -114,11 +125,8 @@ class ReconMiddleware(object):
 
     def GET(self, req):
         error = False
-        start = time.time()
         root, type = split_path(req.path, 1, 2, False)
-        if not type:
-            content = "no type\ndebug: %s" % self.getdeviceinfo()
-        elif type == "mem":
+        if type == "mem":
             content = json.dumps(self.getmem())
         elif type == "load":
             try:
@@ -147,15 +155,16 @@ class ReconMiddleware(object):
         elif type == "ringverify":
             content = json.dumps(self.ringverify())
         else:
-            content = "Bad Monkey! No Taco!"
-        end = time.time() - start
-        content = "%s\n\n-> %s" % (content, end)
+            content = "Invalid path: %s" % req.path
+            return Response(request=req, status="400 Bad Request", \
+                body=content, content_type="text/plain")
+
         if not error:
             return Response(request=req, body=content, \
                 content_type="application/json")
         else:
             return Response(request=req, status="500 Server Error", \
-                body=content, content_type="application/json")
+                body=content, content_type="text/plain")
 
     def __call__(self, env, start_response):
         req = Request(env)
