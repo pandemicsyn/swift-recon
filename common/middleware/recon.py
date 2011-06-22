@@ -17,8 +17,9 @@ from webob import Request, Response
 #from swift.common.ring import Ring
 from swift.common.utils import split_path, cache_from_env
 from swift.common.constraints import check_mount
-from os import statvfs, listdir
+from hashlib import md5
 import simplejson as json
+import os
 
 
 class ReconMiddleware(object):
@@ -31,9 +32,14 @@ class ReconMiddleware(object):
     def __init__(self, app, conf, *args, **kwargs):
         self.app = app
         self.devices = conf.get('devices', '/srv/node/')
+        swift_dir = conf.get('swift_dir', '/etc/swift')
         self.recon_cache_path = conf.get('recon_cache_path', \
             '/var/cache/swift')
         self.object_recon_cache = "%s/object.recon" % self.recon_cache_path
+        self.account_ring_path = os.path.join(swift_dir, 'account.ring.gz')
+        self.container_ring_path = os.path.join(swift_dir, 'container.ring.gz')
+        self.object_ring_path = os.path.join(swift_dir, 'object.ring.gz')
+        self.rings = [self.account_ring_path, self.container_ring_path, self.object_ring_path]
         self.mount_check = conf.get('mount_check', 'true').lower() in \
                               ('true', 't', '1', 'on', 'yes', 'y')
 
@@ -95,7 +101,7 @@ class ReconMiddleware(object):
     def unmounted(self):
         """list unmounted (failed?) devices"""
         mountlist = []
-        for entry in listdir(self.devices):
+        for entry in os.listdir(self.devices):
             mpoint = {'device': entry, \
                 "mounted": check_mount(self.devices, entry)}
             if not mpoint['mounted']:
@@ -105,10 +111,10 @@ class ReconMiddleware(object):
     def diskusage(self):
         """get disk utilization statistics"""
         devices = []
-        for entry in listdir(self.devices):
+        for entry in os.listdir(self.devices):
             if check_mount(self.devices, entry):
                 path = "%s/%s" % (self.devices, entry)
-                disk = statvfs(path)
+                disk = os.statvfs(path)
                 capacity = disk.f_bsize * disk.f_blocks
                 available = disk.f_bsize * disk.f_bavail
                 used = disk.f_bsize * (disk.f_blocks - disk.f_bavail)
@@ -119,9 +125,18 @@ class ReconMiddleware(object):
                     'size': '', 'used': '', 'avail': ''})
         return devices
 
-    def ringverify(self):
-        """place holder, verify ring info"""
-        return "STUFF"
+    def ringmd5(self):
+        """obtain ringmd5's"""
+        sums = {}
+        for ringfile in self.rings:
+            md5sum = md5()
+            with open(ringfile, 'rb') as f:
+                block = f.read(4096)
+                while block:
+                    md5sum.update(block)
+                    block = f.read(4096)
+            sums[ringfile] = md5sum.hexdigest()
+        return sums
 
     def GET(self, req):
         error = False
@@ -152,8 +167,8 @@ class ReconMiddleware(object):
             content = json.dumps(self.unmounted())
         elif type == "diskusage":
             content = json.dumps(self.diskusage())
-        elif type == "ringverify":
-            content = json.dumps(self.ringverify())
+        elif type == "ringmd5":
+            content = json.dumps(self.ringmd5())
         else:
             content = "Invalid path: %s" % req.path
             return Response(request=req, status="400 Bad Request", \

@@ -1,9 +1,10 @@
 Recon Middleware for use with OpenStack Swift Object Servers.
 
-Add to pipeline and add a filter section:
+Add to pipeline and add a filter section. Theres only one config flag at the moment that defaults to /var/cache/swift if not present.  This is path prefix the swift-recon cronjob uses to dump its info and is read from to provide certain statistics (async pendings, last replication time, etc).
 
 [filter:recon]
 use = egg:swift#recon
+recon_cache_path = /var/cache/swift
 
 Provides various operational metrics:
 
