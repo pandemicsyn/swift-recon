@@ -57,9 +57,12 @@ class ReconMiddleware(object):
     def getload(self):
         """get info from /proc/loadavg"""
         loadavg = {}
-        loadavg['1m'], loadavg['5m'], loadavg['15m'], loadavg['tasks'], \
-            loadavg['processes'] \
-                = open('/proc/loadavg', 'r').readline().rstrip().split()
+        onemin, fivemin, ftmin, tasks, procs = open('/proc/loadavg', 'r').readline().rstrip().split()
+        loadavg['1m'] = float(onemin)
+        loadavg['5m'] = float(fivemin)
+        loadavg['15m'] = float(ftmin)
+        loadavg['tasks'] = tasks
+        loadavg['processes'] = int(procs)
         return loadavg
 
     def getmem(self):
