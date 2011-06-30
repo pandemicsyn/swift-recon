@@ -24,3 +24,15 @@ Date: Sun, 12 Jun 2011 06:01:48 GMT
 
 {"15m": "0.00", "1m": "0.00", "5m": "0.00", "processes": "1006", "tasks": "2/182"}
 
+
+
+fhines@ubuntu:~/swift-recon/bin$ python swift-recon.py --objmd5 -a
+===============================================================================
+[2011-06-30 01:03:05] Checking async pendings on 4 hosts...
+-> http://127.0.0.1:6040/recon/async: HTTP Error 400: Bad Request
+Async stats: low: 7, high: 7, avg: 7, total: 21
+===============================================================================
+[2011-06-30 01:03:05] Checking ring md5sum's on 4 hosts...
+-> http://127.0.0.1:6040/recon/ringmd5: HTTP Error 400: Bad Request
+===============================================================================
+
