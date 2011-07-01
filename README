@@ -25,14 +25,35 @@ Date: Sun, 12 Jun 2011 06:01:48 GMT
 {"15m": "0.00", "1m": "0.00", "5m": "0.00", "processes": "1006", "tasks": "2/182"}
 
 
-
-fhines@ubuntu:~/swift-recon/bin$ python swift-recon.py --objmd5 -a
+fhines@ubuntu:~/swift-recon$ python bin/swift-recon.py -h
 ===============================================================================
-[2011-06-30 01:03:05] Checking async pendings on 4 hosts...
--> http://127.0.0.1:6040/recon/async: HTTP Error 400: Bad Request
+Usage: 
+    usage: swift-recon.py [-v] [--suppress] [-a] [-r] [-u] [-d] [-l] [-c] [--objmd5]
+    
+
+Options:
+  -h, --help           show this help message and exit
+  -v, --verbose        Print verbose info
+  --suppress           Suppress most connection related errors
+  -a, --async          Get async stats
+  -r, --replication    Get replication stats
+  -u, --unmounted      Check cluster for unmounted devices
+  -d, --diskusage      Get disk usage stats
+  -l, --loadstats      Get cluster load average stats
+  -c, --connstats      Get connection stats
+  --objmd5             Get md5sums of object.ring.gz and compare to local copy
+  --swiftdir=SWIFTDIR  Default = /etc/swift
+
+fhines@ubuntu:~/swift-recon$ python bin/swift-recon.py -adu --suppress
+===============================================================================
+[2011-07-01 01:09:06] Checking async pendings on 4 hosts...
 Async stats: low: 7, high: 7, avg: 7, total: 21
 ===============================================================================
-[2011-06-30 01:03:05] Checking ring md5sum's on 4 hosts...
--> http://127.0.0.1:6040/recon/ringmd5: HTTP Error 400: Bad Request
+[2011-07-01 01:09:06] Getting unmounted drives from 4 hosts...
+Not mounted: sdb2 on http://127.0.0.1:6020/recon/unmounted
+Not mounted: sdc1 on http://127.0.0.1:6010/recon/unmounted
 ===============================================================================
-
+[2011-07-01 01:09:06] Checking disk usage on 4 hosts...
+-> http://127.0.0.1:6020/recon/diskusage: Error. No drive info available.
+Disk usage: lowest: 2.0%, highest: 2.0%, avg: 2.0%
+===============================================================================
