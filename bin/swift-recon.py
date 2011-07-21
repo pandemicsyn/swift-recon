@@ -211,6 +211,7 @@ def disk_usage():
     highs = []
     lows = []
     averages = []
+    percents = {}
     pool = eventlet.GreenPool(20)
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print "[%s] Checking disk usage on %s hosts..." % (now, len(hosts))
@@ -222,8 +223,10 @@ def disk_usage():
                     used = float(entry['used']) / float(entry['size']) * 100.0
                     hostusage.append(round(used, 2))
             stats[url] = hostusage
+
     for url in stats:
         if len(stats[url]) > 0:
+            #get per host hi/los for another day
             low = min(stats[url])
             high = max(stats[url])
             total = sum(stats[url])
@@ -231,12 +234,22 @@ def disk_usage():
             highs.append(high)
             lows.append(low)
             averages.append(average)
-        else:
+            for percent in stats[url]:
+                percents[percent] = percents.get(percent, 0) + 1
+    else:
             print "-> %s: Error. No drive info available." % url
+
     if len(lows) > 0:
         low = min(lows)
         high = max(highs)
         average = sum(averages) / len(averages)
+        #distrib graph shamelessly stolen from https://github.com/gholt/tcod
+        print "Distribution Graph:"
+        mul = 69.0 / max(percents.values())
+        for percent in sorted(percents):
+            print '% 3d%% % 4d %s' % (percent, percents[percent], \
+                '*' * int(percents[percent] * mul))
+
         print "Disk usage: lowest: %s%%, highest: %s%%, avg: %s%%" % \
             (low, high, average)
     else:
@@ -289,14 +302,7 @@ def main():
     if options.diskusage:
         disk_usage()
     if options.objmd5:
-        #fixme
-        get_ringmd5(os.path.join(swift_dir, 'container.ring.gz'))
-    #if options.conmd5:
-        #fixme
-    #    get_ringmd5(os.path.join(swift_dir, 'container.ring.gz'))
-    #if options.acctmd5:
-        #fixme
-     #   get_ringmd5(os.path.join(swift_dir, 'account.ring.gz'))
+        get_ringmd5(os.path.join(swift_dir, 'object.ring.gz'))
 
 
 if __name__ == '__main__':
