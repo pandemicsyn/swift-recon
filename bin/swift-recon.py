@@ -18,6 +18,7 @@ SUPPRESS_ERRORS = False
 
 
 def getdevices():
+    #fixme
     ring_file = "/etc/swift/object.ring.gz"
     ring_data = Ring(ring_file)
     ips = set((n['ip'], n['port']) for n in ring_data.devs)
@@ -288,7 +289,14 @@ def main():
     if options.diskusage:
         disk_usage()
     if options.objmd5:
+        #fixme
         get_ringmd5(os.path.join(swift_dir, 'container.ring.gz'))
+    #if options.conmd5:
+        #fixme
+    #    get_ringmd5(os.path.join(swift_dir, 'container.ring.gz'))
+    #if options.acctmd5:
+        #fixme
+     #   get_ringmd5(os.path.join(swift_dir, 'account.ring.gz'))
 
 
 if __name__ == '__main__':

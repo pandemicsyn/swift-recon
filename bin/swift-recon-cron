@@ -1,12 +1,15 @@
 #!/bin/bash
 
+#usage: swift-recon-cron /var/log/swift/storage.log 
 #ghetto temporary cronjob to pull some of the stats for swift-recon
 #wont work for much beyond the saio at the moment. 
+
+SYSLOGP="local0.error"
 
 LOCKFILE="/var/lock/swift-recon-object.lock"
 if [ -e $LOCKFILE ]; then
     echo "error $0 is already running - cron jobs overlapping ?" 
-    echo "$0 lock file present" | /usr/bin/logger -p local0.error
+    echo "$0 lock file present" | /usr/bin/logger -p $SYSLOGP
     exit 1
 else
     touch $LOCKFILE
@@ -19,7 +22,7 @@ else
 fi
 
 if [ ! -r "$LOGFILE" ]; then
-    echo "$0: error $LOGFILE not readable" | /usr/bin/logger -p local2.error
+    echo "$0: error $LOGFILE not readable" | /usr/bin/logger -p $SYSLOGP
     rm $LOCKFILE
     exit 1
 fi

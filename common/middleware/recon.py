@@ -15,7 +15,7 @@
 
 from webob import Request, Response
 #from swift.common.ring import Ring
-from swift.common.utils import split_path, cache_from_env
+from swift.common.utils import split_path, cache_from_env, get_logger
 from swift.common.constraints import check_mount
 from hashlib import md5
 import simplejson as json
@@ -33,13 +33,15 @@ class ReconMiddleware(object):
         self.app = app
         self.devices = conf.get('devices', '/srv/node/')
         swift_dir = conf.get('swift_dir', '/etc/swift')
+        self.logger = get_logger(conf, log_route='recon')
         self.recon_cache_path = conf.get('recon_cache_path', \
             '/var/cache/swift')
         self.object_recon_cache = "%s/object.recon" % self.recon_cache_path
         self.account_ring_path = os.path.join(swift_dir, 'account.ring.gz')
         self.container_ring_path = os.path.join(swift_dir, 'container.ring.gz')
         self.object_ring_path = os.path.join(swift_dir, 'object.ring.gz')
-        self.rings = [self.account_ring_path, self.container_ring_path, self.object_ring_path]
+        self.rings = [self.account_ring_path, self.container_ring_path, \
+            self.object_ring_path]
         self.mount_check = conf.get('mount_check', 'true').lower() in \
                               ('true', 't', '1', 'on', 'yes', 'y')
 
@@ -57,7 +59,8 @@ class ReconMiddleware(object):
     def getload(self):
         """get info from /proc/loadavg"""
         loadavg = {}
-        onemin, fivemin, ftmin, tasks, procs = open('/proc/loadavg', 'r').readline().rstrip().split()
+        onemin, fivemin, ftmin, tasks, procs \
+            = open('/proc/loadavg', 'r').readline().rstrip().split()
         loadavg['1m'] = float(onemin)
         loadavg['5m'] = float(fivemin)
         loadavg['15m'] = float(ftmin)
@@ -82,6 +85,8 @@ class ReconMiddleware(object):
             if 'async_pending' in recondata:
                 asyncinfo['async_pending'] = recondata['async_pending']
             else:
+                self.logger.notice( \
+                    _('NOTICE: Async pendings not present in recon data.'))
                 asyncinfo['async_pending'] = -1
         return asyncinfo
 
@@ -94,6 +99,8 @@ class ReconMiddleware(object):
                 repinfo['object_replication_time'] = \
                     recondata['object_replication_time']
             else:
+                self.logger.notice( \
+                    _('NOTICE: obj replication time not in recon data'))
                 repinfo['object_replication_time'] = -1
         return repinfo
 
@@ -144,45 +151,53 @@ class ReconMiddleware(object):
     def GET(self, req):
         error = False
         root, type = split_path(req.path, 1, 2, False)
-        if type == "mem":
-            content = json.dumps(self.getmem())
-        elif type == "load":
-            try:
-                content = json.dumps(self.getload(), sort_keys=True)
-            except IOError as e:
-                error = True
-                content = e
-        elif type == "async":
-            try:
-                content = json.dumps(self.getasyncinfo())
-            except (IOError, ValueError) as e:
-                error = True
-                content = e
-        elif type == "replication":
-            try:
-                content = json.dumps(self.getrepinfo())
-            except (IOError, ValueError) as e:
-                error = True
-                content = e
-        elif type == "mounted":
-            content = json.dumps(self.getmounted())
-        elif type == "unmounted":
-            content = json.dumps(self.unmounted())
-        elif type == "diskusage":
-            content = json.dumps(self.diskusage())
-        elif type == "ringmd5":
-            content = json.dumps(self.ringmd5())
-        else:
-            content = "Invalid path: %s" % req.path
-            return Response(request=req, status="400 Bad Request", \
-                body=content, content_type="text/plain")
+        try:
+            if type == "mem":
+                content = json.dumps(self.getmem())
+            elif type == "load":
+                try:
+                    content = json.dumps(self.getload(), sort_keys=True)
+                except IOError as e:
+                    error = True
+                    content = "load - %s" % e
+            elif type == "async":
+                try:
+                    content = json.dumps(self.getasyncinfo())
+                except IOError as e:
+                    error = True
+                    content = "async - %s" % e
+            elif type == "replication":
+                try:
+                    content = json.dumps(self.getrepinfo())
+                except IOError as e:
+                    error = True
+                    content = "replication - %s" % e
+            elif type == "mounted":
+                content = json.dumps(self.getmounted())
+            elif type == "unmounted":
+                content = json.dumps(self.unmounted())
+            elif type == "diskusage":
+                content = json.dumps(self.diskusage())
+            elif type == "ringmd5":
+                content = json.dumps(self.ringmd5())
+            else:
+                content = "Invalid path: %s" % req.path
+                return Response(request=req, status="400 Bad Request", \
+                    body=content, content_type="text/plain")
+                    
+        except ValueError as e:
+            error = True
+            content = "ValueError: %s" % e
 
         if not error:
             return Response(request=req, body=content, \
                 content_type="application/json")
         else:
+            msg = 'CRITICAL recon - %s' % str(content)
+            self.logger.critical(msg)
+            body = "Internal server error."
             return Response(request=req, status="500 Server Error", \
-                body=content, content_type="text/plain")
+                body=body, content_type="text/plain")
 
     def __call__(self, env, start_response):
         req = Request(env)
