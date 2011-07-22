@@ -14,7 +14,6 @@
 # limitations under the License.
 
 from webob import Request, Response
-#from swift.common.ring import Ring
 from swift.common.utils import split_path, cache_from_env, get_logger
 from swift.common.constraints import check_mount
 from hashlib import md5
@@ -26,7 +25,7 @@ class ReconMiddleware(object):
     """
     Recon middleware used for monitoring.
 
-    If the path is /recon/all|load|mem|async it will respond with system info.
+    /recon/load|mem|async... will return various system metrics.
     """
 
     def __init__(self, app, conf, *args, **kwargs):
@@ -78,7 +77,7 @@ class ReconMiddleware(object):
         return meminfo
 
     def getasyncinfo(self):
-        """grab # of async pendings"""
+        """get # of async pendings"""
         asyncinfo = {}
         with open(self.object_recon_cache, 'r') as f:
             recondata = json.load(f)
@@ -86,7 +85,7 @@ class ReconMiddleware(object):
                 asyncinfo['async_pending'] = recondata['async_pending']
             else:
                 self.logger.notice( \
-                    _('NOTICE: Async pendings not present in recon data.'))
+                    _('NOTICE: Async pendings not in recon data.'))
                 asyncinfo['async_pending'] = -1
         return asyncinfo
 
@@ -136,7 +135,7 @@ class ReconMiddleware(object):
         return devices
 
     def ringmd5(self):
-        """obtain ringmd5's"""
+        """get all ring md5sum's"""
         sums = {}
         for ringfile in self.rings:
             md5sum = md5()
@@ -183,8 +182,7 @@ class ReconMiddleware(object):
             else:
                 content = "Invalid path: %s" % req.path
                 return Response(request=req, status="400 Bad Request", \
-                    body=content, content_type="text/plain")
-                    
+                    body=content, content_type="text/plain")       
         except ValueError as e:
             error = True
             content = "ValueError: %s" % e
