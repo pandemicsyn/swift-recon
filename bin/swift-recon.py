@@ -21,8 +21,6 @@ def getdevices():
     #todo , fitler by zone[s]
     ring_file = "/etc/swift/object.ring.gz"
     ring_data = Ring(ring_file)
-    for n in ring_data.devs:
-        print n['ip'], n['port'], n['zone']
     ips = set((n['ip'], n['port']) for n in ring_data.devs)
     return ips
 

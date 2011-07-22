@@ -1,6 +1,6 @@
 Recon Middleware for use with OpenStack Swift Object Servers.
 
-Add to pipeline and add a filter section. Theres only one config flag at the moment that defaults to /var/cache/swift if not present.  This is path prefix the swift-recon cronjob uses to dump its info and is read from to provide certain statistics (async pendings, last replication time, etc).
+Add it to the pipeline and add its filter section. There is only one config flag at the moment (defaults to /var/cache/swift if not present) which is the path prefix the swift-recon cronjob uses when dumping its info and which is read to provide certain statistics (async pendings, last replication time, etc).
 
 [filter:recon]
 use = egg:swift#recon
@@ -44,16 +44,23 @@ Options:
   --objmd5             Get md5sums of object.ring.gz and compare to local copy
   --swiftdir=SWIFTDIR  Default = /etc/swift
 
-fhines@ubuntu:~/swift-recon$ python bin/swift-recon.py -adu --suppress
+fhines@ubuntu:~$ python swift-recon/bin/swift-recon.py -adu --suppress --objmd5
 ===============================================================================
-[2011-07-01 01:09:06] Checking async pendings on 4 hosts...
+[2011-07-22 00:18:44] Checking async pendings on 4 hosts...
 Async stats: low: 7, high: 7, avg: 7, total: 21
 ===============================================================================
-[2011-07-01 01:09:06] Getting unmounted drives from 4 hosts...
+[2011-07-22 00:18:44] Getting unmounted drives from 4 hosts...
 Not mounted: sdb2 on http://127.0.0.1:6020/recon/unmounted
-Not mounted: sdc1 on http://127.0.0.1:6010/recon/unmounted
+Not mounted: sdb3 on http://127.0.0.1:6030/recon/unmounted
+Not mounted: sdb4 on http://127.0.0.1:6040/recon/unmounted
 ===============================================================================
-[2011-07-01 01:09:06] Checking disk usage on 4 hosts...
+[2011-07-22 00:18:44] Checking disk usage on 4 hosts...
 -> http://127.0.0.1:6020/recon/diskusage: Error. No drive info available.
-Disk usage: lowest: 2.0%, highest: 2.0%, avg: 2.0%
+Distribution Graph:
+  0%    1 *********************************************************************
+  2%    1 *********************************************************************
+Disk usage: lowest: 0.41%, highest: 2.0%, avg: 1.205%
+===============================================================================
+[2011-07-22 00:18:44] Checking ring md5sum's on 4 hosts...
+4/4 hosts matched, 0 error[s] while checking hosts.
 ===============================================================================
