@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 """
-    cmdline utility to perfrom cluster reconnaissance
+    cmdline utility to perform cluster reconnaissance
 """
 
 

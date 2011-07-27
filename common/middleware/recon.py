@@ -44,7 +44,7 @@ class ReconMiddleware(object):
         self.mount_check = conf.get('mount_check', 'true').lower() in \
                               ('true', 't', '1', 'on', 'yes', 'y')
 
-    def getmounted(self):
+    def get_mounted(self):
         """get ALL mounted fs from /proc/mounts"""
         mounts = []
         with open('/proc/mounts', 'r') as procmounts:
@@ -55,7 +55,7 @@ class ReconMiddleware(object):
                 mounts.append(mount)
         return mounts
 
-    def getload(self):
+    def get_load(self):
         """get info from /proc/loadavg"""
         loadavg = {}
         onemin, fivemin, ftmin, tasks, procs \
@@ -67,7 +67,7 @@ class ReconMiddleware(object):
         loadavg['processes'] = int(procs)
         return loadavg
 
-    def getmem(self):
+    def get_mem(self):
         """get info from /proc/meminfo"""
         meminfo = {}
         with open('/proc/meminfo', 'r') as memlines:
@@ -76,7 +76,7 @@ class ReconMiddleware(object):
                 meminfo[entry[0]] = entry[1].strip()
         return meminfo
 
-    def getasyncinfo(self):
+    def get_async_info(self):
         """get # of async pendings"""
         asyncinfo = {}
         with open(self.object_recon_cache, 'r') as f:
@@ -89,7 +89,7 @@ class ReconMiddleware(object):
                 asyncinfo['async_pending'] = -1
         return asyncinfo
 
-    def getrepinfo(self):
+    def get_replication_info(self):
         """grab last object replication time"""
         repinfo = {}
         with open(self.object_recon_cache, 'r') as f:
@@ -103,11 +103,11 @@ class ReconMiddleware(object):
                 repinfo['object_replication_time'] = -1
         return repinfo
 
-    def getdeviceinfo(self):
+    def get_device_info(self):
         """place holder, grab dev info"""
         return self.devices
 
-    def unmounted(self):
+    def get_unmounted(self):
         """list unmounted (failed?) devices"""
         mountlist = []
         for entry in os.listdir(self.devices):
@@ -117,7 +117,7 @@ class ReconMiddleware(object):
                 mountlist.append(mpoint)
         return mountlist
 
-    def diskusage(self):
+    def get_diskusage(self):
         """get disk utilization statistics"""
         devices = []
         for entry in os.listdir(self.devices):
@@ -134,7 +134,7 @@ class ReconMiddleware(object):
                     'size': '', 'used': '', 'avail': ''})
         return devices
 
-    def ringmd5(self):
+    def get_ring_md5(self):
         """get all ring md5sum's"""
         sums = {}
         for ringfile in self.rings:
@@ -152,37 +152,37 @@ class ReconMiddleware(object):
         root, type = split_path(req.path, 1, 2, False)
         try:
             if type == "mem":
-                content = json.dumps(self.getmem())
+                content = json.dumps(self.get_mem())
             elif type == "load":
                 try:
-                    content = json.dumps(self.getload(), sort_keys=True)
+                    content = json.dumps(self.get_load(), sort_keys=True)
                 except IOError as e:
                     error = True
                     content = "load - %s" % e
             elif type == "async":
                 try:
-                    content = json.dumps(self.getasyncinfo())
+                    content = json.dumps(self.get_async_info())
                 except IOError as e:
                     error = True
                     content = "async - %s" % e
             elif type == "replication":
                 try:
-                    content = json.dumps(self.getrepinfo())
+                    content = json.dumps(self.get_replication_info())
                 except IOError as e:
                     error = True
                     content = "replication - %s" % e
             elif type == "mounted":
-                content = json.dumps(self.getmounted())
+                content = json.dumps(self.get_mounted())
             elif type == "unmounted":
-                content = json.dumps(self.unmounted())
+                content = json.dumps(self.get_unmounted())
             elif type == "diskusage":
-                content = json.dumps(self.diskusage())
+                content = json.dumps(self.get_diskusage())
             elif type == "ringmd5":
-                content = json.dumps(self.ringmd5())
+                content = json.dumps(self.get_ring_md5())
             else:
                 content = "Invalid path: %s" % req.path
                 return Response(request=req, status="400 Bad Request", \
-                    body=content, content_type="text/plain")       
+                    body=content, content_type="text/plain")
         except ValueError as e:
             error = True
             content = "ValueError: %s" % e
