@@ -194,7 +194,12 @@ class ReconMiddleware(object):
             elif type == "mounted":
                 content = json.dumps(self.get_mounted())
             elif type == "unmounted":
-                content = json.dumps(self.get_unmounted())
+                if self.mount_check:
+                    content = json.dumps(self.get_unmounted())
+                else:
+                    body = "Not implemented."
+                    return Response(request=req, status="501 Not implemented", \
+                        body=body, content_type="text/plain")
             elif type == "diskusage":
                 content = json.dumps(self.get_diskusage())
             elif type == "ringmd5":
