@@ -18,11 +18,13 @@ VERBOSE = False
 SUPPRESS_ERRORS = False
 
 
-def getdevices():
-    #todo , fitler by zone[s]
+def get_devices(zone_filter):
     ring_file = "/etc/swift/object.ring.gz"
     ring_data = Ring(ring_file)
-    ips = set((n['ip'], n['port']) for n in ring_data.devs)
+    if zone_filter:
+        ips = set((n['ip'], n['port']) for n in ring_data.devs if n['zone'] == zone_filter)
+    else:
+        ips = set((n['ip'], n['port']) for n in ring_data.devs)
     return ips
 
 
@@ -90,11 +92,10 @@ def scout_quarantine(host):
     return url, content, status
 
 
-def get_ringmd5(ringfile):
+def get_ringmd5(hosts, ringfile):
     stats = {}
     matches = 0
     errors = 0
-    hosts = getdevices()
     md5sum = md5()
     with open(ringfile, 'rb') as f:
         block = f.read(4096)
@@ -126,10 +127,8 @@ def get_ringmd5(ringfile):
     print "=" * 79
 
 
-def async_check():
-    ASYNC_COUNTER = 0
+def async_check(hosts):
     stats = {}
-    hosts = getdevices()
     pool = eventlet.GreenPool(20)
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print "[%s] Checking async pendings on %s hosts..." % (now, len(hosts))
@@ -148,9 +147,8 @@ def async_check():
     print "=" * 79
 
 
-def umount_check():
+def umount_check(hosts):
     stats = {}
-    hosts = getdevices()
     pool = eventlet.GreenPool(20)
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print "[%s] Getting unmounted drives from %s hosts..." % (now, len(hosts))
@@ -163,9 +161,8 @@ def umount_check():
     print "=" * 79
 
 
-def replication_check():
+def replication_check(hosts):
     stats = {}
-    hosts = getdevices()
     pool = eventlet.GreenPool(20)
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print "[%s] Checking replication times on %s hosts..." % (now, len(hosts))
@@ -184,11 +181,10 @@ def replication_check():
     print "=" * 79
 
 
-def load_check():
+def load_check(hosts):
     load1 = {}
     load5 = {}
     load15 = {}
-    hosts = getdevices()
     pool = eventlet.GreenPool(20)
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print "[%s] Checking load avg's on %s hosts..." % (now, len(hosts))
@@ -211,11 +207,10 @@ def load_check():
     print "=" * 79
 
 
-def quarantine_check():
+def quarantine_check(hosts):
     objq = {}
     conq = {}
     acctq = {}
-    hosts = getdevices()
     pool = eventlet.GreenPool(20)
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print "[%s] Checking quarantine dirs on %s hosts..." % (now, len(hosts))
@@ -238,8 +233,7 @@ def quarantine_check():
     print "=" * 79
 
 
-def disk_usage():
-    hosts = getdevices()
+def disk_usage(hosts):
     stats = {}
     highs = []
     lows = []
@@ -294,7 +288,9 @@ def main():
     global VERBOSE, SUPPRESS_ERRORS, swift_dir, pool
     print "=" * 79
     usage = '''
-    usage: %prog [-v] [--suppress] [-a] [-r] [-u] [-d] [-l] [--objmd5]
+    usage: %prog [-v] [--suppress] [-a] [-r] [-u] [-d] [-l] 
+                 [--objmd5] [-z zone]
+    ex: %prog -ar -z 1
     '''
     args = optparse.OptionParser(usage)
     args.add_option('--verbose', '-v', action="store_true",
@@ -313,6 +309,8 @@ def main():
         help="Get cluster load average stats")
     args.add_option('--quarantined', '-q', action="store_true",
         help="Get cluster quarantine stats")
+    args.add_option('--zone', '-z', type="int", 
+        help="Only query servers in specified zone")
     args.add_option('--objmd5', action="store_true",
         help="Get md5sums of object.ring.gz and compare to local copy")
     args.add_option('--swiftdir', default="/etc/swift",
@@ -327,20 +325,25 @@ def main():
     VERBOSE = options.verbose
     SUPPRESS_ERRORS = options.suppress
 
+    if options.zone:
+        hosts = get_devices(options.zone)
+    else:
+        hosts = get_devices(None)
+
     if options.async:
-        async_check()
+        async_check(hosts)
     if options.unmounted:
-        umount_check()
+        umount_check(hosts)
     if options.replication:
-        replication_check()
+        replication_check(hosts)
     if options.loadstats:
-        load_check()
+        load_check(hosts)
     if options.diskusage:
-        disk_usage()
+        disk_usage(hosts)
     if options.objmd5:
-        get_ringmd5(os.path.join(swift_dir, 'object.ring.gz'))
+        get_ringmd5(hosts, os.path.join(swift_dir, 'object.ring.gz'))
     if options.quarantined:
-        quarantine_check()
+        quarantine_check(hosts)
 
 
 if __name__ == '__main__':
