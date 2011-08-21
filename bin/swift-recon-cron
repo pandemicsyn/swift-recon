@@ -18,8 +18,9 @@ def async_count(device_dir, logger):
         asyncdir = os.path.join(device_dir, i, "async_pending")
         if os.path.isdir(asyncdir):
             for entry in os.listdir(asyncdir):
-                async_hdir = os.path.join(asyncdir, entry)
-                async_count += len(os.listdir(async_hdir))
+                if os.path.isdir(os.path.join(asyncdir, entry)):
+                    async_hdir = os.path.join(asyncdir, entry)
+                    async_count += len(os.listdir(async_hdir))
     return async_count
 
 
