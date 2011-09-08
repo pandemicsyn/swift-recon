@@ -17,7 +17,10 @@ from webob import Request, Response
 from swift.common.utils import split_path, cache_from_env, get_logger
 from swift.common.constraints import check_mount
 from hashlib import md5
-import simplejson as json
+try:
+    import simplejson as json
+except ImportError:
+    import json
 import os
 
 
@@ -194,12 +197,7 @@ class ReconMiddleware(object):
             elif type == "mounted":
                 content = json.dumps(self.get_mounted())
             elif type == "unmounted":
-                if self.mount_check:
-                    content = json.dumps(self.get_unmounted())
-                else:
-                    body = "Not implemented."
-                    return Response(request=req, status="501 Not implemented", \
-                        body=body, content_type="text/plain")
+                content = json.dumps(self.get_unmounted())
             elif type == "diskusage":
                 content = json.dumps(self.get_diskusage())
             elif type == "ringmd5":

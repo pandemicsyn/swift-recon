@@ -6,10 +6,13 @@ swift-recon-cron.py
 import os
 import sys
 import optparse
-import tempfile
-import simplejson as json
+from tempfile import NamedTemporaryFile
+try:
+    import simplejson as json
+except ImportError:
+    import json
 from ConfigParser import ConfigParser
-from swift.common.utils import get_logger
+from swift.common.utils import get_logger, dump_recon_cache
 
 
 def async_count(device_dir, logger):
@@ -24,41 +27,17 @@ def async_count(device_dir, logger):
     return async_count
 
 
-def last_replication_log(logfile, logger):
-    lastlog = None
-    try:
-        with open(logfile) as replog:
-            for line in replog:
-                if "Object replication complete." in line:
-                    lastlog = line
-        if lastlog:
-            return float(lastlog.split(" ")[8].lstrip('('))
-        else:
-            return None
-    except IOError as e:
-        logger.critical("%s" % e)
-        return None
-
-
-def dump_recon_cache(stats, cache_file):
-    with tempfile.NamedTemporaryFile(delete=False) as tf:
-        tf.write(json.dumps(stats) + '\n')
-    os.rename(tf.name, cache_file)
-
-
 def main():
     c = ConfigParser()
     try:
         conf_path = sys.argv[1]
-        log_source = sys.argv[2]
     except Exception:
-        print "Usage: %s CONF_FILE LOG_SOURCE" % sys.argv[0].split('/')[-1]
+        print "Usage: %s CONF_FILE" % sys.argv[0].split('/')[-1]
+        print "ex: swift-recon-cron /etc/swift/object-server.conf"
         sys.exit(1)
     if not c.read(conf_path):
         print "Unable to read config file %s" % conf_path
         sys.exit(1)
-    if not os.path.isfile(log_source):
-        print "Path to log source is invalid."
     conf = dict(c.items('filter:recon'))
     device_dir = conf.get('devices', '/srv/node')
     recon_cache_path = conf.get('recon_cache_path', '/var/cache/swift')
@@ -68,16 +47,18 @@ def main():
     try:
         os.mkdir("/var/lock/swift-recon-object-cron")
     except OSError as e:
-        logger.critical("%s" % e)
+        logger.critical(_(str(e)))
+        print str(e)
         sys.exit(1)
-    stats = {}
-    stats['async_pending'] = async_count(device_dir, logger)
-    repcount = last_replication_log(log_source, logger)
-    if repcount:
-        stats['object_replication_time'] = repcount
-    dump_recon_cache(stats, cache_file)
-    os.rmdir("/var/lock/swift-recon-object-cron")
-
+    asyncs = async_count(device_dir, logger)
+    try:
+        dump_recon_cache('async_pending', asyncs, cache_file)
+    except Exception:
+        logger.exception(_('Exception dumping recon cache'))
+    try:
+        os.rmdir("/var/lock/swift-recon-object-cron")
+    except Exception:
+        logger.exception(_('Exception remove cronjob lock'))
 
 if __name__ == '__main__':
     main()
