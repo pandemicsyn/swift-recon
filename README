@@ -1,3 +1,5 @@
+[!!old deprecated repo] This is the old Recon Middleware for OpenStack Swift - use the Swift Repo instead (http://github.com/openstack/swift) instead!
+
 Recon Middleware for use with OpenStack Swift Object Servers.
 
 Add it to the pipeline and add its filter section. There is only one config flag at the moment (defaults to /var/cache/swift if not present) which is the path prefix the swift-recon cronjob uses when dumping its info and which is read to provide certain statistics (async pendings, last replication time, etc).
